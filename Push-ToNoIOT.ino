@@ -18,8 +18,8 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
-// --- NEW SERIAL FOR NEXTION ON PINS 5 & 6 ---
-// Create a new Hardware Serial port (SERCOM0) on Pins 5 (RX) and 6 (TX)
+
+// creates serial for nextion display on pins 5&6
 Uart nextionSerial (&sercom0, 5, 6, SERCOM_RX_PAD_1, UART_TX_PAD_0);
 
 // Interrupt handler for the new Serial port
@@ -33,7 +33,7 @@ static const uint32_t GPSBaud = 9600;
 
 TinyGPSPlus gps;
 Adafruit_SSD1306 d(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
-Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x29);
+Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x29);//initialise IMU
 
 //location variables
 double lat;
@@ -119,8 +119,8 @@ void readDataAndDisplay()
   }
   // gps data
   
-  lat = 52.02707; // gps.location.lat();
-  lng = -0.4465455; // gps.location.lng();
+  lat = gps.location.lat();
+  lng = gps.location.lng();
   int year = gps.date.year();
   int month = gps.date.month();
   int day = gps.date.day();
@@ -136,7 +136,7 @@ void readDataAndDisplay()
     d.setCursor(0,0);
     d.print("Waiting for GPS time...");
     d.display();
-    return;   // skip calculations this cycle
+    return;   // skip calculations this cycle, coordinates will not be accurate
   }
   
   JD = getJulianDate(year,month,day,gpsHour,gpsMin,gpsSec);
@@ -145,7 +145,8 @@ void readDataAndDisplay()
   float yaw   = euler.x() * DEG_TO_RAD;   // heading
   float roll  = euler.y() * DEG_TO_RAD;   // roll
   float pitch = euler.z() * DEG_TO_RAD;   // pitch
-  
+
+  // rotation matrices to convert euler angles to East, North, Up components
   float Rx[3][3] = {
     {1, 0, 0},
     {0, cos(roll), -sin(roll)},
@@ -208,8 +209,8 @@ void readDataAndDisplay()
     d.print("satellite");
   }
   
-  // --- SEND TO NEXTION ---
-  // Multiplied by 100 for decimals (requires vvs1 attribute = 2 in Nextion Editor)
+  //sending values to display
+  // Multiplied by 100 to get decimal points (requires vvs1 attribute = 2 in Nextion Editor)
   myNex.writeNum("tAz.val", (targetAz*100));
   myNex.writeNum("tAlt.val", (targetAlt*100));
   myNex.writeNum("cAz.val", (calculatedAzimuth*100));
@@ -222,46 +223,32 @@ void readDataAndDisplay()
   d.print("\nT't Alt: ");
   d.print(targetAlt);
   d.display();
-  /*
-  Serial.print("X: "); Serial.print(yaw);
-  Serial.print("\tY: "); Serial.print(pitch);
-  Serial.print("\tZ: "); Serial.print(roll);
-  Serial.print("\t");
-  
-  Serial.print("lat: "); Serial.print(lat,6);
-  Serial.print(" lng: "); Serial.print(lng,6);
-  Serial.print(" LST(h): "); Serial.print(LST,6);
-  Serial.print(" RA(h): "); Serial.print(targetRA,6);
-  double ha_h = LST - targetRA; Serial.print(" HA(h): "); Serial.print(ha_h,6);
-  Serial.print(" HA(deg): "); Serial.print(ha_h*15.0,6);
-  Serial.print(" targetDec: "); Serial.println(targetDec,6);
-  */
 // trigger functions that are called when Nextion display sends hex values in response to a button click 
 } 
 void trigger1() {
-  objectData(1); // Item 0 was picked
+  objectData(1); // object 1 was picked
   targetAzAlt();
 }
 
 void trigger2() {
-  objectData(2); // Item 1 was picked
+  objectData(2); // object 2 was picked
   targetAzAlt();
 }
 
 void trigger3() {
-  objectData(3); // Item 2 was picked
+  objectData(3); // object 3 was picked
   targetAzAlt();
 }
 void trigger4() {
-  objectData(4); // Item 3 was picked
+  objectData(4); // object 4 was picked
   targetAzAlt();
 }
 void trigger5() {
-  objectData(5); // Item 4 was picked
+  objectData(5); // object 5 was picked
   targetAzAlt();
 }
 void trigger6() {
-  objectData(6); // Item 5 was picked
+  objectData(6); // object 6 was picked
   targetAzAlt();
 }
 double getJulianDate(int y, int m, int d, int hr, int mn, int sc){ // formula converts UTC to JD - Practical Astronomy with your Calculator or Spreadsheet
@@ -283,7 +270,7 @@ double getJulianDate(int y, int m, int d, int hr, int mn, int sc){ // formula co
   double JD = (B+C+D+dy+1720994.5);
   return JD;
 }
-double JDtoLST(double JD,int hour, int min, int sec){
+double JDtoLST(double JD,int hour, int min, int sec){ // julian date to Local sidereal time
   double S = JD - 2451545.0;
   double T = S/36525.0;
   double TZero =  fmod((6.697374558 +(2400.051336*T)+(0.000025862*T*T)),24);
@@ -297,7 +284,7 @@ double JDtoLST(double JD,int hour, int min, int sec){
   return LST;
   
 }
-void targetAzAlt(){
+void targetAzAlt(){ // fetches the required RA and dec values from the target, converts static RA/dec values to altitude and azimuth
   double hourAngle = (LST - targetRA); // Convert degrees to hours
   
   if (hourAngle < 0) hourAngle += 24;
@@ -314,14 +301,9 @@ void targetAzAlt(){
   targetAlt = asin(sin(Lat)*sin(tD) +cos(Lat)*cos(tD)*cos(hourAngle))*RAD_TO_DEG;
   
 }
-void onObjectIDChange() {
-  
-}
-void onLocationChange() {}
+
 void loop() {
-  // put your main code here, to run repeatedly:
   readDataAndDisplay();
-  //ArduinoCloud.update();
 }
 void objectData(int ObjectID){
   if (ObjectID==1){ //crab nebula: M1
