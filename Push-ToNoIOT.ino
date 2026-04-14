@@ -91,7 +91,7 @@ void setup() {
   delay(20);
 
 }
-void matrixMultiplication(float A[3][3], float B[3][3], float R[3][3]) // matrix multiplication converted to code
+void matrixMultiplication(float A[3][3], float B[3][3], float R[3][3]) // matrix multiplication for rotation matrices
 {
     for(int i=0; i<3; i++) {
         for(int j=0; j<3; j++) {
