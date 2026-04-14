@@ -48,8 +48,8 @@ String targetName;
 double JD;
 double LST;
 
-void setup() {
-  // put your setup code here, to run once:
+void setup() 
+{
   Serial.begin(115200);
   Serial1.begin(GPSBaud);
 
