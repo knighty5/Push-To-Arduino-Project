@@ -53,10 +53,10 @@ void setup()
   Serial.begin(115200);
   Serial1.begin(GPSBaud);
 
-  // --- INITIALIZE NEW NEXTION SERIAL ---
+  //initialising nextion serial
   nextionSerial.begin(115200); // Most Nextion displays default to 9600
   
-  // Assign Pins 5 and 6 to the SERCOM function
+  //assign Pins 5 and 6 to SERCOM function
   pinPeripheral(5, PIO_SERCOM_ALT);
   pinPeripheral(6, PIO_SERCOM_ALT);
   
